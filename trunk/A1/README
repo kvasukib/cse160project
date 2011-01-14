@@ -1,0 +1,39 @@
+Directory contents and code structure
+-------------------------------------
+
+Provided code modules
+
+Primes.cpp    : Main module
+init.cpp      : Accepts input and initializes data structures
+Report.cpp    : Reports information about the primes
+init_thr.cpp  : Threaded version of Initialization
+prime_thr.cpp : Template for "thread" routine
+             
+isPrime.cpp   : Primality tester
+Timer.cpp     : Serial Timer
+parTimer.cpp  : Parallel version of the Timer
+
+*** You should not make changes to the following files
+Timer.cpp
+parTimer.cpp
+Report.cpp
+
+
+------------------------------------------------------------------
+
+Scripts to run with for 8  and 64 candidate primes, respectively,
+both and parallel versions
+
+run8_serial.sh
+run64.sh
+run8.sh
+run64.sh
+
+------------------------------------------------------------------
+
+These are needed only if you are building code on a machine other than
+ieng6-203, where the local pthreads implementation doesn't support
+Barriers
+
+Barrier.h
+Semaphore.h
