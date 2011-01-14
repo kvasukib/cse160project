@@ -3,6 +3,9 @@
 #include <fstream>
 #include <iostream>
 #include <pthread.h>
+
+#include <math.h>
+
 using namespace std;
 // Tests numbers for primality
 // Usage: a.out n1 [n2...]
@@ -31,6 +34,8 @@ int *primes;
 int n;
 int NT;
 
+//our globals
+int elements_per_thread;
 
 
 //
@@ -42,13 +47,30 @@ int main(int argc, char *argv[]) {
     double t0 = -getTime();
     int i;
     int nPrimes = 0;
-    for (i=0;i<n; i++) {
-        if (isPrime (candidates[i])){
+    pthread_t * th_arr = new pthread_t [NT];
+    elements_per_thread = (int) ceil(n/NT);
+
+    for (i=0;i<NT; i++) {
+        int64_t ind = i;
+        pthread_create(&th_arr[i], NULL, prime_thr, reinterpret_cast<void *>(ind));
+
+        /*if (isPrime (candidates[i])){
             nPrimes++;
             // If candidates[i] is prime, then set prime[i] to true
             primes[i] = TRUE;
-        }
+        }*/
     }
+    
+    // Join the threads
+    for (int t=0; t<NT; t++)
+      pthread_join(th_arr[t],NULL);
+
+    for (int i=0; i<n; i++){
+      if (primes[i] == TRUE){
+        nPrimes ++;
+      }
+    }
+
     t0 += getTime();
 
     // The log file
@@ -60,4 +82,6 @@ int main(int argc, char *argv[]) {
 
     cout << endl;
     delete [] candidates;
+
+    pthread_exit(NULL);
 }
