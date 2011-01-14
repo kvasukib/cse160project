@@ -24,10 +24,30 @@ extern double *timings;
 extern int *primes;
 extern int n;
 extern int NT;
-
+extern int elements_per_thread;
 
 // This is the function which is called by a newly created thread
 void *prime_thr( void *arg )
 {
+    int64_t i = reinterpret_cast<int64_t>(arg);
+    int tid = i;
+
+    // this is the last thread
+    if (tid == NT -1) {
+      for (int j = tid * elements_per_thread; j < n; j++){
+        if (isPrime(candidates[j])) {
+          primes[j] = TRUE;
+        }
+      }
+    } else {
+      for (int j = tid * elements_per_thread; j < tid * elements_per_thread + elements_per_thread; j++){
+        if (isPrime(candidates[j])) {
+          primes[j] = TRUE;
+        }
+      }
+    
+    }
+
+    pthread_exit(NULL);
     return 0;
 }
