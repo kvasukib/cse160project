@@ -54,11 +54,6 @@ int main(int argc, char *argv[]) {
         int64_t ind = i;
         pthread_create(&th_arr[i], NULL, prime_thr, reinterpret_cast<void *>(ind));
 
-        /*if (isPrime (candidates[i])){
-            nPrimes++;
-            // If candidates[i] is prime, then set prime[i] to true
-            primes[i] = TRUE;
-        }*/
     }
     
     // Join the threads
