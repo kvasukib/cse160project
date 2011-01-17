@@ -44,12 +44,12 @@ int elements_per_thread;
 int main(int argc, char *argv[]) {
     initInput(argc,argv);
 
-    double t0 = -getTime();
     int i;
     int nPrimes = 0;
     pthread_t * th_arr = new pthread_t [NT];
     elements_per_thread = (int) ceil(n/NT);
 
+    double t0 = -getTime();
     for (i=0;i<NT; i++) {
         int64_t ind = i;
         pthread_create(&th_arr[i], NULL, prime_thr, reinterpret_cast<void *>(ind));
@@ -65,13 +65,13 @@ int main(int argc, char *argv[]) {
     for (int t=0; t<NT; t++)
       pthread_join(th_arr[t],NULL);
 
+    t0 += getTime();
     for (int i=0; i<n; i++){
       if (primes[i] == TRUE){
         nPrimes ++;
       }
     }
 
-    t0 += getTime();
 
     // The log file
     // Do not change the file name, as the autograder
