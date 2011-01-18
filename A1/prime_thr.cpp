@@ -25,13 +25,15 @@ extern int *primes;
 extern int n;
 extern int NT;
 extern int elements_per_thread;
+extern double t0;
 
 // This is the function which is called by a newly created thread
 void *prime_thr( void *arg )
 {
+    
     int64_t i = reinterpret_cast<int64_t>(arg);
     int tid = i;
-
+    double t1 = -getTime(1);
     // this is the last thread
     if (tid == NT -1) {
       for (int j = tid * elements_per_thread; j < n; j++){
@@ -47,6 +49,8 @@ void *prime_thr( void *arg )
       }
     
     }
+    t1 += getTime(1);
+    t0 = t1;
 
     pthread_exit(NULL);
     return 0;

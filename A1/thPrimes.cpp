@@ -36,7 +36,7 @@ int NT;
 
 //our globals
 int elements_per_thread;
-
+double t0;
 
 //
 // --- Start of main module
@@ -49,7 +49,8 @@ int main(int argc, char *argv[]) {
     pthread_t * th_arr = new pthread_t [NT];
     elements_per_thread = (int) ceil(n/NT);
 
-    double t0 = -getTime();
+    initTimer(NT);
+    //double t0 = -getTime();
     for (i=0;i<NT; i++) {
         int64_t ind = i;
         pthread_create(&th_arr[i], NULL, prime_thr, reinterpret_cast<void *>(ind));
@@ -60,7 +61,8 @@ int main(int argc, char *argv[]) {
     for (int t=0; t<NT; t++)
       pthread_join(th_arr[t],NULL);
 
-    t0 += getTime();
+    FinalizeTimer();
+    //t0 += getTime();
     for (int i=0; i<n; i++){
       if (primes[i] == TRUE){
         nPrimes ++;
