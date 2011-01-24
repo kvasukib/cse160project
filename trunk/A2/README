@@ -1,0 +1,38 @@
+Directory contents and code structure
+-------------------------------------
+
+Provided code modules
+
+apf.cpp       : Main module
+solve.cpp     : Solver code. This is where the heavy lifting is done
+init.cpp      : Reads command line arguments and initializes the simulation,
+              : alllocating data structures
+cmdLine.cpp   : Parses command line arugments
+Report.cpp    : Reports various information
+format.cpp    : Program showing how to adjust output formatting for C++ ostream 
+             
+Timer.cpp     : Serial Timer
+parTimer.cpp  : Parallel version of the Timer
+
+splot.c       : plotter
+printMat.c    : utility to print out a 2D array
+
+***************************************************************************
+*** You should not the following files (nor their names)
+*** Doing so could could cause your submission to be graded incorrectly
+***************************************************************************
+
+cmdLine.cpp
+Report.cpp
+Timer.cpp
+parTimer.cpp
+splot.c
+apf.h
+types.h
+
+
+------------------------------------------------------------------
+
+Scripts showing how to invoke the program
+
+run.sh                          Serial run
