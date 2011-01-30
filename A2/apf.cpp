@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <string>
 #include <math.h>
+#include <pthread.h>
 #include "time.h"
 #include "apf.h"
 #include "types.h"
@@ -61,6 +62,31 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
 void printTOD(ofstream& logfile, string mesg);
 void ReportStart(ofstream& logfile, _DOUBLE_ dt, _DOUBLE_ T, int m, int n, int tx, int ty);
 void ReportEnd(ofstream& logfile, _DOUBLE_ T, int niter, _DOUBLE_ **E_prev, int m,int n, double t0, int tx, int ty);
+void *solve_thr( void *arg );
+
+//global vars
+pthread_barrier_t barr;
+int q, first_q, rest_q; //used to determine partitioning
+_DOUBLE_ **E, **R, **E_prev;
+ _DOUBLE_ T;
+ int m;
+ int n;
+ int do_stats;
+ int plot_freq;
+ int tx, ty;
+
+ _DOUBLE_ dt;
+ _DOUBLE_ alpha;
+
+// This parameter controls the frequncy (in timesteps)
+// that summary statistics are reported
+// Reduce the value of FREQ to increase the frequency,
+// increase the value to raise the frequency
+const int STATS_FREQ = 100;
+
+ofstream logfile("Log.txt",ios::out);
+
+int NT = 4;
 // Main program
 int main(int argc, char** argv)
 {
@@ -71,19 +97,19 @@ int main(int argc, char** argv)
   *   E_prev is the Excitation variable for the previous timestep,
   *      and is used in time integration
   */
- _DOUBLE_ **E, **R, **E_prev;
+
 
  // Default values for the command line arguments
- _DOUBLE_ T=1500.0;
- int m=100,n=100;
- int do_stats = 0;
- int plot_freq = 0;
- int tx = 1, ty = 1;
-// This parameter controls the frequncy (in timesteps)
-// that summary statistics are reported
-// Reduce the value of FREQ to increase the frequency,
-// increase the value to raise the frequency
- const int STATS_FREQ = 100;
+ T=1500.0;
+ m=100;
+ n=100;
+ do_stats = 0;
+ plot_freq = 0;
+ tx = 1;
+ ty = 1;
+
+
+
 
 // Parse command line arguments
  cmdLine( argc, argv, T, n, tx, ty, do_stats,  plot_freq);
@@ -95,7 +121,7 @@ int main(int argc, char** argv)
 
  // The log file
  // Do not change the file name or remove this call
-   ofstream logfile("Log.txt",ios::out);
+
    printTOD(logfile, "Simulation begins");
 
     
@@ -131,14 +157,32 @@ int main(int argc, char** argv)
  // This ensures that the computation of dte and especially dt
  // will not lose precision (i.e. if computed as single precision values)
 
+ if(pthread_barrier_init(&barr, NULL, NT))
+ {
+    cerr << "could not create barrier\n";
+    exit(-1);
+ }
  _DOUBLE_ dx = 1.0/n;
  double rp= kk*(b+1)*(b+1)/4;
- double dte=(dx*dx)/(d*4+((dx*dx))*(rp+kk));
+ double dte=(dx*dx)/(d*4+((dx*dx))*(rp+kk));void *prime_thr( void *arg );
  double dtr=1/(epsilon+((M1/M2)*rp));
  double ddt = (dte<dtr) ? 0.95*dte : 0.95*dtr;
- _DOUBLE_ dt = (_DOUBLE_) ddt;
- _DOUBLE_ alpha = d*dt/(dx*dx);
+ dt = (_DOUBLE_) ddt;
+ alpha = d*dt/(dx*dx);
 
+ //figure out partitioning
+ if(n % NT != 0)
+ {
+   q = n % NT;
+   first_q = (int) ceil(n/NT);
+   rest_q = (int) floor(n/NT);
+
+ }
+ else
+ {
+   q = NT;
+   first_q = (int) n/NT;
+ }
  // End Initization of various simulation variables
 
  // Report various information
@@ -147,8 +191,20 @@ int main(int argc, char** argv)
 
  // Start the timer
  double t0 = -getTime();
- int niter = solve(logfile, &E, &E_prev, R, m, n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ);
 
+ pthread_t * th_arr = new pthread_t [NT];
+
+ for(int i = 0; i < NT; i++)
+ {
+   int64_t ind = i;
+   pthread_create(&th_arr[i], NULL, solve_thr, reinterpret_cast<void *> (ind));
+ }
+ int niter = 0;
+ //int niter = solve(logfile, &E, &E_prev, R, m, n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ);
+ for (int t=0; t < NT; t++)
+ {
+  pthread_join(th_arr[t], NULL);
+ }
  t0 += getTime();
 
  // Report various information
