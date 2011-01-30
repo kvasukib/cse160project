@@ -37,7 +37,7 @@ extern  _DOUBLE_ alpha;
 // that summary statistics are reported
 // Reduce the value of FREQ to increase the frequency,
 // increase the value to raise the frequency
-int STATS_FREQ = 100;
+const int STATS_FREQ = 100;
 
 extern ofstream logfile;
 
@@ -87,7 +87,7 @@ void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,in
  // Simulated time is different from the integer timestep number
  _DOUBLE_ t = 0.0;
  // Integer timestep number
- int niter=0;
+extern int niter;
 
 //int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq){
 void * solve_thr (void * arg){
@@ -104,7 +104,8 @@ void * solve_thr (void * arg){
  // the desired simulation Time
  // This is different from the number of iterations
   while (t<T) {
-  
+  //int asd = 0;
+  //cerr << " ";
   if(tid == 0){  
    #ifdef DEBUG
    printMat(E_prev,m,n);
@@ -113,7 +114,7 @@ void * solve_thr (void * arg){
     splot(E_prev,t,niter,m+1,n+1,WAIT);
     #endif
 
-    t += dt;
+
     niter++;
 
    /* 
@@ -137,7 +138,7 @@ void * solve_thr (void * arg){
    }//end first serial section
 
    int rc = pthread_barrier_wait(&barr);
-   if(rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD)
+   if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD)
    {
       cerr << "could not wait on barrier\n";
       exit(-1);
@@ -150,6 +151,7 @@ void * solve_thr (void * arg){
 	E[j][i] = E_prev[j][i]+alpha*(E_prev[j][i+1]+E_prev[j][i-1]-4*E_prev[j][i]+E_prev[j+1][i]+E_prev[j-1][i]);
      }
     }
+
 
    /* 
     * Solve the ODE, advancing excitation and recovery variables
@@ -168,7 +170,8 @@ void * solve_thr (void * arg){
      for (int i=1; i<=n+1; i++, EE++, RR++)
 	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
    }
-
+    if(tid == 0)
+      t += dt;
    //barrier to finish all computations
    rc = pthread_barrier_wait(&barr);
    if(rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD)
@@ -177,7 +180,7 @@ void * solve_thr (void * arg){
       exit(-1);
    }
 
-
+   //cerr << tid;
    if(tid == 0)
    {
      if (do_stats)
@@ -192,11 +195,16 @@ void * solve_thr (void * arg){
 
    // Swap current and previous
      _DOUBLE_ **tmp = E; E = E_prev; E_prev = tmp;
-   }//end serial section
- }
 
+   }//end serial section
+
+
+ }
+ //pthread_barrier_destroy(&barr);
+ //cerr << "thread "<< tid <<" exiting\n";
   // Store them into the pointers passed in
   //*_E = E;
   //*_E_prev = E_prev;
+  pthread_exit(NULL);
   return 0;
 }
