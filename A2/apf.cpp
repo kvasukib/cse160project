@@ -78,6 +78,7 @@ _DOUBLE_ **E, **R, **E_prev;
  _DOUBLE_ dt;
  _DOUBLE_ alpha;
 
+int niter;
 // This parameter controls the frequncy (in timesteps)
 // that summary statistics are reported
 // Reduce the value of FREQ to increase the frequency,
@@ -181,7 +182,7 @@ int main(int argc, char** argv)
  else
  {
    q = NT;
-   first_q = (int) n/NT;
+   first_q = (int) (n+1)/NT;
  }
  // End Initization of various simulation variables
 
@@ -193,23 +194,30 @@ int main(int argc, char** argv)
  double t0 = -getTime();
 
  pthread_t * th_arr = new pthread_t [NT];
-
+ niter = 0;
  for(int i = 0; i < NT; i++)
  {
    int64_t ind = i;
-   pthread_create(&th_arr[i], NULL, solve_thr, reinterpret_cast<void *> (ind));
+   if(pthread_create(&th_arr[i], NULL, solve_thr, reinterpret_cast<void *> (ind)))
+   {
+      cerr << "could not create thread " << i;
+   }
  }
- int niter = 0;
+
+ cerr << "threads have started\n";
  //int niter = solve(logfile, &E, &E_prev, R, m, n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ);
  for (int t=0; t < NT; t++)
  {
-  pthread_join(th_arr[t], NULL);
+   pthread_join(th_arr[t], NULL);
  }
  t0 += getTime();
 
+ cerr << "about to execute report end\n";
  // Report various information
  // Do not remove this call, it is needed for grading
  ReportEnd(logfile,T,niter,E_prev,m,n,t0,tx,ty);
+
+ cerr << "done with report end\n";
 
  if (plot_freq){
     printf("\n\nEnter any input to close the program and the plot...");
