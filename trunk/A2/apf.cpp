@@ -172,17 +172,18 @@ int main(int argc, char** argv)
  alpha = d*dt/(dx*dx);
 
  //figure out partitioning
- if(n % NT != 0)
+ if((n+1) % NT != 0)
  {
-   q = n % NT;
-   first_q = (int) ceil(n/NT);
-   rest_q = (int) floor(n/NT);
+   q = (n+1) % NT;
+   first_q = (int) ceil((n+1)/NT);
+   rest_q = (int) floor((n+1)/NT);
 
  }
  else
  {
    q = NT;
    first_q = (int) (n+1)/NT;
+   rest_q = (int) (n+1)/NT;
  }
  // End Initization of various simulation variables
 

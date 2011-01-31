@@ -96,10 +96,19 @@ void * solve_thr (void * arg){
  //_DOUBLE_ **E = *_E, **E_prev = *_E_prev;
   int64_t id = reinterpret_cast<int64_t>(arg);
   int tid = id;
-
- int start = 1 + id * first_q;
- int end = start + first_q;
-
+ 
+  int start;
+  int end;
+  if(tid < q)
+  {
+    start = 1 + id * first_q;
+    end = start + first_q;
+  }
+  else
+  {
+    start = 1+id*rest_q;
+    end = start+ rest_q;
+  }
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
  // This is different from the number of iterations
