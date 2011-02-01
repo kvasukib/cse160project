@@ -18,7 +18,7 @@
 #include "apf.h"
 #include "types.h"
 using namespace std;
-
+double getTime(int DUMMY);
 extern pthread_barrier_t barr;
 //global vars
 extern int q, first_q, rest_q; //used to determine partitioning
@@ -32,6 +32,7 @@ extern  int tx, ty;
 
 extern  _DOUBLE_ dt;
 extern  _DOUBLE_ alpha;
+extern  _DOUBLE_ t0;
 
 // This parameter controls the frequncy (in timesteps)
 // that summary statistics are reported
@@ -45,13 +46,6 @@ extern int NT;
 
 
 void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,int n, int niter, int stats_freq);
-
-
-
-
-
-
-
 
 // Reports statistics about the computation: the L2 Norm and the Infinity NOrm
 // These values should not vary (except to within roundoff)
@@ -126,6 +120,9 @@ void * solve_thr (void * arg){
     startj=1;
     endj=n+2;
   }
+ 
+  _DOUBLE_ t1 = -getTime(1);
+
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
  // This is different from the number of iterations
@@ -226,6 +223,9 @@ void * solve_thr (void * arg){
 
 
  }
+  t1 += getTime(1);
+  if(tid == 0)
+    t0 = t1;
  //pthread_barrier_destroy(&barr);
  //cerr << "thread "<< tid <<" exiting\n";
   // Store them into the pointers passed in
