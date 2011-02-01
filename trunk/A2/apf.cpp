@@ -87,7 +87,7 @@ const int STATS_FREQ = 100;
 
 ofstream logfile("Log.txt",ios::out);
 
-int NT = 4;
+int NT;
 // Main program
 int main(int argc, char** argv)
 {
@@ -119,6 +119,11 @@ int main(int argc, char** argv)
     exit(-1);
  }
  m = n;
+
+ if(tx > ty)
+   NT = tx;
+ else
+   NT = ty;
 
  // The log file
  // Do not change the file name or remove this call
@@ -175,8 +180,8 @@ int main(int argc, char** argv)
  if((n+1) % NT != 0)
  {
    q = (n+1) % NT;
-   first_q = (int) ceil((n+1)/NT);
-   rest_q = (int) floor((n+1)/NT);
+   first_q =  ceil((float)(n+1)/NT);
+   rest_q =  floor((float)(n+1)/NT);
 
  }
  else
@@ -205,7 +210,7 @@ int main(int argc, char** argv)
    }
  }
 
- cerr << "threads have started\n";
+ //cerr << "threads have started\n";
  //int niter = solve(logfile, &E, &E_prev, R, m, n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ);
  for (int t=0; t < NT; t++)
  {
@@ -213,12 +218,12 @@ int main(int argc, char** argv)
  }
  t0 += getTime();
 
- cerr << "about to execute report end\n";
+ //cerr << "about to execute report end\n";
  // Report various information
  // Do not remove this call, it is needed for grading
  ReportEnd(logfile,T,niter,E_prev,m,n,t0,tx,ty);
 
- cerr << "done with report end\n";
+ //cerr << "done with report end\n";
 
  if (plot_freq){
     printf("\n\nEnter any input to close the program and the plot...");
