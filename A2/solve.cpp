@@ -106,7 +106,7 @@ void * solve_thr (void * arg){
   }
   else
   {
-    start = 1+id*rest_q;
+    start = 1+ (q*first_q) + (id-q)*rest_q;
     end = start+ rest_q;
   }
  // We continue to sweep over the mesh until the simulation has reached
