@@ -97,17 +97,34 @@ void * solve_thr (void * arg){
   int64_t id = reinterpret_cast<int64_t>(arg);
   int tid = id;
  
-  int start;
-  int end;
+  int startj;
+  int endj;
+  int starti;
+  int endi;
   if(tid < q)
   {
-    start = 1 + id * first_q;
-    end = start + first_q;
+    startj = 1 + id * first_q;
+    endj = startj + first_q;
+    starti = 1 + id * first_q;
+    endi = starti + first_q;
   }
   else
   {
-    start = 1+ (q*first_q) + (id-q)*rest_q;
-    end = start+ rest_q;
+    startj = 1+ (q*first_q) + (id-q)*rest_q;
+    endj = startj+ rest_q;
+    starti = 1+ (q*first_q) + (id-q)*rest_q;
+    endi = starti + rest_q;
+  }
+
+  if(tx > ty)
+  {
+    starti = 1;
+    endi = n+2;
+  }
+  else
+  {
+    startj=1;
+    endj=n+2;
   }
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
@@ -155,8 +172,8 @@ void * solve_thr (void * arg){
 
    
    // Solve for the excitation, a PDE
-   for (int j=start; j<end; j++){
-     for (int i=1; i<=n+1; i++) {
+   for (int j=startj; j<endj; j++){
+     for (int i=starti; i<endi; i++) {
 	E[j][i] = E_prev[j][i]+alpha*(E_prev[j][i+1]+E_prev[j][i-1]-4*E_prev[j][i]+E_prev[j+1][i]+E_prev[j-1][i]);
      }
     }
@@ -166,17 +183,17 @@ void * solve_thr (void * arg){
     * Solve the ODE, advancing excitation and recovery variables
     *     to the next timtestep
     */
-   for ( int j=start; j<end; j++){
-     _DOUBLE_ *RR = &R[j][1];
-     _DOUBLE_ *EE = &E[j][1];
-     for (int i=1; i<=n+1; i++, EE++,RR++)
+   for ( int j=startj; j<endj; j++){
+     _DOUBLE_ *RR = &R[j][starti];
+     _DOUBLE_ *EE = &E[j][starti];
+     for (int i=starti; i<endi; i++, EE++,RR++)
 	EE[0] += -dt*(kk*EE[0]*(EE[0]-a)*(EE[0]-1)+EE[0]*RR[0]);
    }
 
-   for (int j=start; j<end; j++){
-     _DOUBLE_ *RR = &R[j][1];
-     _DOUBLE_ *EE = &E[j][1];
-     for (int i=1; i<=n+1; i++, EE++, RR++)
+   for (int j=startj; j<endj; j++){
+     _DOUBLE_ *RR = &R[j][starti];
+     _DOUBLE_ *EE = &E[j][starti];
+     for (int i=starti; i<endi; i++, EE++, RR++)
 	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
    }
     if(tid == 0)
