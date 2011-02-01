@@ -63,7 +63,8 @@ void printTOD(ofstream& logfile, string mesg);
 void ReportStart(ofstream& logfile, _DOUBLE_ dt, _DOUBLE_ T, int m, int n, int tx, int ty);
 void ReportEnd(ofstream& logfile, _DOUBLE_ T, int niter, _DOUBLE_ **E_prev, int m,int n, double t0, int tx, int ty);
 void *solve_thr( void *arg );
-
+void initTimer(int NT);
+void FinalizeTimer();
 //global vars
 pthread_barrier_t barr;
 int q, first_q, rest_q; //used to determine partitioning
@@ -77,6 +78,7 @@ _DOUBLE_ **E, **R, **E_prev;
 
  _DOUBLE_ dt;
  _DOUBLE_ alpha;
+ _DOUBLE_ t0;
 
 int niter;
 // This parameter controls the frequncy (in timesteps)
@@ -197,10 +199,12 @@ int main(int argc, char** argv)
   ReportStart(logfile, dt, T, m, n, tx, ty);
 
  // Start the timer
- double t0 = -getTime();
+ //double t0 = -getTime();
 
  pthread_t * th_arr = new pthread_t [NT];
  niter = 0;
+
+ initTimer(NT);
  for(int i = 0; i < NT; i++)
  {
    int64_t ind = i;
@@ -216,7 +220,9 @@ int main(int argc, char** argv)
  {
    pthread_join(th_arr[t], NULL);
  }
- t0 += getTime();
+ FinalizeTimer();
+
+ //t0 += getTime();
 
  //cerr << "about to execute report end\n";
  // Report various information

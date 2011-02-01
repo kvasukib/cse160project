@@ -32,7 +32,7 @@ CFLAGS += $(ARITH)
 
 app:		apf
 
-OBJECTS = apf.o solve.o splot.o cmdLine.o Report.o printMat.o Timer.o
+OBJECTS = apf.o solve.o splot.o cmdLine.o Report.o printMat.o parTimer.o Timer.o
 
 apf:	        $(OBJECTS) 
 		$(C++LINK) $(LDFLAGS) -o $@ $(OBJECTS)  $(LDLIBS)
