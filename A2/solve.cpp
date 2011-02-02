@@ -38,7 +38,7 @@ extern  _DOUBLE_ t0;
 // that summary statistics are reported
 // Reduce the value of FREQ to increase the frequency,
 // increase the value to raise the frequency
-const int STATS_FREQ = 100;
+extern int STATS_FREQ;
 
 extern ofstream logfile;
 
