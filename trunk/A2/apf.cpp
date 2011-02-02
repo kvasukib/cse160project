@@ -85,7 +85,7 @@ int niter;
 // that summary statistics are reported
 // Reduce the value of FREQ to increase the frequency,
 // increase the value to raise the frequency
-const int STATS_FREQ = 100;
+int STATS_FREQ = 100;
 
 ofstream logfile("Log.txt",ios::out);
 
