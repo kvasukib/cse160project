@@ -11,9 +11,9 @@
 #include <iostream>
 #include <stdlib.h>
 #include <assert.h>
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include <pthread.h>
+#include "time.h"
+
 using namespace std;
 
 #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -26,7 +26,8 @@ double **A, **R;
 
 void Report(int N, int NT, double t0,int matCode,int verif);
 
-
+void initTimer(int NT);
+void FinalizeTimer();
 void printMat(int N,double **A){
   int i,j ;
   if (N < 10){
@@ -41,6 +42,7 @@ void printMat(int N,double **A){
 }
 int NT;
 int N;
+double t0;
 // External routines
 void * elim_thr(void * arg);
 void initMat(int N, double **A, double **R, int matCode);
@@ -49,7 +51,6 @@ void cmdLine(int argc, char *argv[], int& n, int& nt, int& matCode);
 int main(int argc,char *argv[])
 {
   int i, matCode;
-  double t0;
 
   cmdLine(argc, argv, N, NT, matCode);
   printf("N = %d, nt = %d\n",N,NT);
@@ -80,14 +81,7 @@ int main(int argc,char *argv[])
     assert(R[i] = (double *)malloc(N*sizeof(double)));
   } 
 
-#ifdef _OPENMP
-    omp_set_num_threads(NT);
-#pragma omp parallel
-#pragma omp single
-    printf("# of openMP threads: %d\n",NT);
-#else
-    printf("Serial run (no openmp)\n"); 
-#endif
+printf("# of pthreads: %d\n",NT);
 
  if(pthread_barrier_init(&barr, NULL, NT))
  {
@@ -99,9 +93,29 @@ int main(int argc,char *argv[])
   initMat(N,A, R,matCode);
   printMat(N,A);
 
+//warmup
+
+  pthread_t * th_arr_warm = new pthread_t [NT];
+initTimer(NT);
+for(int i = 0; i < NT; i++)
+ {
+   int64_t ind = i;
+   if(pthread_create(&th_arr_warm[i], NULL, elim_thr, reinterpret_cast<void *> (ind)))
+   {
+      cerr << "could not create thread " << i;
+   }
+ }
+
+ for (int t=0; t < NT; t++)
+ {
+   pthread_join(th_arr_warm[t], NULL);
+ }
+ FinalizeTimer();
+
+  initMat(N,A, R,matCode);
   pthread_t * th_arr = new pthread_t [NT];
 
-  t0 = -getTime();
+ initTimer(NT);
  for(int i = 0; i < NT; i++)
  {
    int64_t ind = i;
@@ -111,19 +125,11 @@ int main(int argc,char *argv[])
    }
  }
 
-  //Warm up the code by running LU once, before we collect timings.
-  //elim(N);
- //
-  // Don't forget to re-initialize A and R */
-  //initMat(N, A, R, matCode);
-
-  //elim(N);
-
  for (int t=0; t < NT; t++)
  {
    pthread_join(th_arr[t], NULL);
  }
-  t0 += getTime();
+ FinalizeTimer();
 
   /* print results */
   printMat(N,A);

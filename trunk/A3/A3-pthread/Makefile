@@ -38,7 +38,7 @@ endif
 app:	lu
 
 
-OBJ	= lu.o elim.o verify.o init.o cmdLine.o Report.o Timer.o
+OBJ	= lu.o elim.o verify.o init.o cmdLine.o Report.o Timer.o parTimer.o
 
 lu:	$(OBJ)
 	$(C++LINK) $(LDFLAGS) -o $@ $(OBJ)  $(LDLIBS)
