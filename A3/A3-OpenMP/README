@@ -1,0 +1,36 @@
+Directory contents and code structure
+-------------------------------------
+
+Provided code modules
+
+lu.cpp        : Main module
+elim.cpp      : Performs Gaussian Elimination.
+                This is where the heavy lifting is done
+init.cpp      : Initializes the matrix
+Report.cpp    : Reports various information
+verify.cpp    : Verifies the outcome
+cmdLine.cpp   : Parses command line arugments
+             
+Timer.cpp     : Serial Timer
+parTimer.cpp  : Parallel version of the Timer
+
+printMat.c    : utility to print out a 2D array
+lu.h          : Some constants needed by the code
+
+Barrier.h     : Used to implement  barrier synchrhonization
+Semaphore.h   : Semphores, needed by barrier synchronization
+
+***************************************************************************
+*** You should not change the following files
+*** Doing so could could cause your submission to be graded incorrectly
+***************************************************************************
+
+cmdLine.cpp
+init.cpp
+verify.cpp
+Report.cpp
+Timer.cpp
+parTimer.cpp
+lu.h
+Barrier.h
+Semaphore.h
