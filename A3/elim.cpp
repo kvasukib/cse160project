@@ -13,9 +13,7 @@
 #include <assert.h>
 #include <math.h>
 
-#ifdef OPENMP_
 #include <omp.h>
-#endif
 using namespace std;
 
 #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -23,7 +21,7 @@ using namespace std;
 double getTime();
 
 extern double **A, **R;
-
+extern int NT;
 
 void elim(int N)
 {
@@ -32,9 +30,17 @@ void elim(int N)
 // If we get stuck, we can count the number of row swaps
 // Do this for a small matrix
 // int swaps = 0;
-
-  for ( k = 0; k < N; k++ ) {
+  int tid;
+  int totalrows = 0;
+  int chunk;
+#pragma omp parallel private(i,j,k, tid, totalrows,chunk) num_threads(NT)
+for ( k = 0; k < N; k++ ) {
+//chunk = ceil( (float)(N-k-1)/NT);
+//tid = omp_get_thread_num();
+//totalrows=0;
 /* Partial Pivoting */
+#pragma omp single
+{
       Mx = k;
       for ( i = k+1; i < N; i++ ) {
 	  if (fabs(A[i][k]) > fabs(A[Mx][k]))
@@ -49,16 +55,22 @@ void elim(int N)
          }
       }
 /* End Partial Pivoting */
-
+}
+#pragma omp for// schedule(static, 1)
     for ( i = k+1; i < N; i++ ) 
+    {
       A[i][k] /= A[k][k];  
-
+      totalrows++;
+      //printf("Thread %d doing %d\n", tid, i);
+    }
+#pragma omp for// schedule(static, 1)
     for ( i = k+1; i < N; i++ ) {
       double Aik = A[i][k];
       double *Ai = A[i];
       for ( j = k+1; j < N; j++ ) 
         Ai[j] -= Aik * A[k][j];
     }  
+ // printf("Thread%d did %d rows\n",tid,totalrows);
   }
 //    cout << "Did " << swaps << " row swaps " << endl;
 }

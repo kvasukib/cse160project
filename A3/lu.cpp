@@ -38,7 +38,7 @@ void printMat(int N,double **A){
     printf("\n");
  }
 }
-
+int NT;
 // External routines
 void elim(int N);
 void initMat(int N, double **A, double **R, int matCode);
@@ -46,7 +46,7 @@ void cmdLine(int argc, char *argv[], int& n, int& nt, int& matCode);
 
 int main(int argc,char *argv[])
 {
-  int i, N, NT, matCode;
+  int i, N, matCode;
   double t0;
 
   cmdLine(argc, argv, N, NT, matCode);
