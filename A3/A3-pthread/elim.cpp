@@ -12,17 +12,18 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 
 using namespace std;
 
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
-double getTime();
+double getTime(int DUMMY);
 extern pthread_barrier_t barr;
 extern double **A, **R;
 extern int NT;
 extern int N;
-
+extern double t0;
 int q;
 int first_q;
 int rest_q;
@@ -37,6 +38,8 @@ void * elim_thr(void * arg)
 // If we get stuck, we can count the number of row swaps
 // Do this for a small matrix
 // int swaps = 0;
+  double t1 = -getTime(1);
+
 for ( k = 0; k < N; k++ ) {
 
   if(tid==0)
@@ -114,6 +117,10 @@ for ( k = 0; k < N; k++ ) {
  // printf("Thread%d did %d rows\n",tid,totalrows);
 //    cout << "Did " << swaps << " row swaps " << endl;
 }
+  t1 += getTime(1);
+  if(tid == 0)
+    t0 = t1;
+
   pthread_exit(NULL);
   return 0;
 }
