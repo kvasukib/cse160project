@@ -30,10 +30,7 @@ void elim(int N)
 // If we get stuck, we can count the number of row swaps
 // Do this for a small matrix
 // int swaps = 0;
-  int tid;
-  int totalrows = 0;
-  int chunk;
-#pragma omp parallel private(i,j,k, tid, totalrows,chunk) num_threads(NT)
+#pragma omp parallel private(i,j,k) num_threads(NT)
 for ( k = 0; k < N; k++ ) {
 //chunk = ceil( (float)(N-k-1)/NT);
 //tid = omp_get_thread_num();
@@ -60,7 +57,6 @@ for ( k = 0; k < N; k++ ) {
     for ( i = k+1; i < N; i++ ) 
     {
       A[i][k] /= A[k][k];  
-      totalrows++;
       //printf("Thread %d doing %d\n", tid, i);
     }
 #pragma omp for// schedule(static, 1)
