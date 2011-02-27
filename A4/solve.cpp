@@ -52,27 +52,27 @@ void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,in
      return l2norm;
  }
 
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq){
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** _tmp_entire, int rank, int full_n){
 
  // Simulated time is different from the integer timestep number
  _DOUBLE_ t = 0.0;
  // Integer timestep number
  int niter=0;
 
- _DOUBLE_ **E = *_E, **E_prev = *_E_prev;
+ _DOUBLE_ **E = *_E, **E_prev = *_E_prev, ** tmp_entire = *_tmp_entire;
 
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
  // This is different from the number of iterations
   while (t<T) {
-  
+/*  
 #ifdef DEBUG
    printMat(E_prev,m,n);
    repNorms(logfile,E_prev,t,dt,m,n,niter, stats_freq);
    if (plot_freq)
     splot(E_prev,t,niter,m+1,n+1,WAIT);
 #endif
-
+*/
    t += dt;
    niter++;
 
@@ -120,16 +120,24 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
 	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
    }
 
-   if (do_stats)
-     repNorms(logfile, E,t,dt,m,n,niter,stats_freq);
+   if(rank==0){
+     if (do_stats)
+       repNorms(logfile, tmp_entire,t,dt,m,n,niter,stats_freq);
 
-   if (plot_freq){
-        int k = (int)(t/plot_freq);
-        if ((t-k*plot_freq)<dt){
-            splot(E,t,niter,m+1,n+1,WAIT);
-        }
-    }
+/*     for(i = 1; i <=full_n+1; i++)
+     {
+        for(j=1; j <=full_n+1; j++)
+            cerr << tmp_entire[i][j];
+        cerr << '\n';
 
+     }*/
+     if (plot_freq){
+          int k = (int)(t/plot_freq);
+          if ((t-k*plot_freq)<dt){
+              splot(tmp_entire,t,niter,m+1,n+1,WAIT);
+          }
+      }
+   }
    // Swap current and previous
    _DOUBLE_ **tmp = E; E = E_prev; E_prev = tmp;
  }
