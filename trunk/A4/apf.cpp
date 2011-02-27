@@ -39,32 +39,44 @@ _DOUBLE_ **alloc2D(int m,int n){
    return(E);
 }
 
-void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int m,int n){
+void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int n,int my_m,int my_n, int rank){
     int i,j;
     // Initialization
-    for (j=1; j<=m + 1; j++)
-        for (i=1; i<= n+1; i++){
+    for (j=1; j<=my_m + 1; j++)
+        for (i=1; i<= my_n+1; i++){
             E_prev[j][i] = R[j][i] = 0;
     }
-    for (j=1; j<=m + 1; j++)
-        for (i=n/2+2; i<= n+1 ; i++){
-            E_prev[j][i] = 1.0;
+    for (j=1; j<=my_m + 1; j++){
+      // for (i=n/2+2; i<= n+1 ; i++){
+       for (i=1; i<=my_n+1; i++){
+            if(rank*my_n + i >= n/2+2)
+              E_prev[j][i] = 1.0;
+       }
     }
-
-    for (j=m/2+2; j<=m+1; j++)
-        for (i=1; i<=n+1; i++)
-            R[j][i] = 1.0;
+   
+   // for (j=m/2+2; j<=m+1; j++){
+    for (j=1; j <= my_m+1; j++){
+        if(rank*my_m + j >= n/2+2){
+            for (i=1; i<=my_n+1; i++)
+                R[j][i] = 1.0;
+        }
+    }
 }
 
 // External functions
 void cmdLine(int argc, char *argv[], _DOUBLE_& T, int& n, int& tx, int& ty, int& do_stats, int& plot_freq, int& noComm);
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq);
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int full_n);
 void printTOD(ofstream& logfile, string mesg);
 void ReportStart(ofstream& logfile, _DOUBLE_ dt, _DOUBLE_ T, int m, int n, int tx, int ty, int noComm);
 void ReportEnd(ofstream& logfile, _DOUBLE_ T, int niter, _DOUBLE_ **E_prev, int m,int n, double t0, int tx, int ty);
 // Main program
 int main(int argc, char** argv)
 {
+  MPI_Init( &argc, &argv);
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  printf("Process %d of %d reporting\n", rank, size);
  /*
   *  Solution arrays
   *   E is the "Excitation" variable, a voltage
@@ -73,6 +85,7 @@ int main(int argc, char** argv)
   *      and is used in time integration
   */
  _DOUBLE_ **E, **R, **E_prev;
+ _DOUBLE_ ** tmp_entire;
 
  // Default values for the command line arguments
  _DOUBLE_ T=1500.0;
@@ -98,22 +111,46 @@ int main(int argc, char** argv)
  // The log file
  // Do not change the file name or remove this call
    ofstream logfile("Log.txt",ios::out);
+   if(rank==0){
    printTOD(logfile, "Simulation begins");
+   }
 
-    
+  //calculate number of rows for each proc
+   int rows_per_thread = (int) ceil(n/size);
+   int my_m = m;
+   int my_n = rows_per_thread;
+
  // Allocate contiguous memory for solution arrays
  // The computational box is defined on [1:m+1,1:n+1]
  // We pad the arrays in order to facilitate differencing on the 
  // boundaries of the computation box
- E = alloc2D(m+2,n+2);
- E_prev = alloc2D(m+2,n+2);
- R = alloc2D(m+2,n+2);
+   E = alloc2D(my_m+2,my_n+2);
+   E_prev = alloc2D(my_m+2,my_n+2);
+   R = alloc2D(my_m+2,my_n+2);
 
- init(E,E_prev,R,m,n);
+ init(E,E_prev,R,m,my_m,my_n,rank);
+ if(rank==0)
+ {
+   tmp_entire = alloc2D(m+2, n+2);
+  
+    int i,j;
+    // Initialization
+    for (j=1; j<=m + 1; j++)
+        for (i=1; i<= n+1; i++){
+            tmp_entire[j][i] = 0;
+    }
+    for (j=1; j<=m + 1; j++){
+       for (i=n/2+2; i<= n+1 ; i++){
+              tmp_entire[j][i] = 1.0;
+       }
+    }
+ }
 #ifdef DEBUG
-   repNorms(E_prev,-1,dt,m,n,-1,STATS_FREQ);
+ if(rank==0){
+   repNorms(tmp_entire,-1,dt,m,n,-1,STATS_FREQ);
    if (plot_freq)
-     splot(E_prev,-1,-1,m+1,n+1,WAIT);
+     splot(tmp_entire,-1,-1,m+1,n+1,WAIT);
+ }
 #endif
 
 
@@ -145,18 +182,20 @@ int main(int argc, char** argv)
 
  // Report various information
  // Do not remove this call, it is needed for grading
+if(rank==0)
   ReportStart(logfile, dt, T, m, n, tx, ty, noComm);
 
  // Start the timer
  double t0 = -MPI_Wtime();
- int niter = solve(logfile, &E, &E_prev, R, m, n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ);
+ int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank, n);
 
  t0 += MPI_Wtime();
 
  // Report various information
  // Do not remove this call, it is needed for grading
- ReportEnd(logfile,T,niter,E_prev,m,n,t0,tx,ty);
-
+ if(rank==0){
+   ReportEnd(logfile,T,niter,tmp_entire,m,n,t0,tx,ty);
+ }
  if (plot_freq){
     printf("\n\nEnter any input to close the program and the plot...");
     int resp;
@@ -166,4 +205,6 @@ int main(int argc, char** argv)
  free (E);
  free (E_prev);
  free (R);
+
+ MPI_Finalize();
 }
