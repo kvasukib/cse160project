@@ -116,10 +116,19 @@ int main(int argc, char** argv)
    }
 
   //calculate number of rows for each proc
-   int rows_per_thread = (int) ceil(n/size);
-   int my_m = m;
-   int my_n = rows_per_thread;
+   int rows_per_thread;
+   int my_m;
+   int my_n;
 
+   if((n+1) % size == 0){
+     rows_per_thread = (int) ceil((n+1)/size);
+     my_m = rows_per_thread;
+     my_n = n;
+   }
+   else
+   { 
+     return 1;
+   }
  // Allocate contiguous memory for solution arrays
  // The computational box is defined on [1:m+1,1:n+1]
  // We pad the arrays in order to facilitate differencing on the 
@@ -144,6 +153,15 @@ int main(int argc, char** argv)
               tmp_entire[j][i] = 1.0;
        }
     }
+/*
+     for(i = 1; i <=n+1; i++)
+     {
+        for(j=1; j <=n+1; j++)
+            printf("Reading i=%d j=%d\n", i, j);
+            cerr << tmp_entire[i][j];
+        cerr << '\n';
+     }
+*/
  }
 #ifdef DEBUG
  if(rank==0){
