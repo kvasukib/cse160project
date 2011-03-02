@@ -138,7 +138,7 @@ int main(int argc, char** argv)
    R = alloc2D(my_m+2,my_n+2);
 
  init(E,E_prev,R,m,my_m,my_n,rank);
- if(rank==0)
+ if(1)
  {
    tmp_entire = alloc2D(m+2, n+2);
   
@@ -206,7 +206,7 @@ if(rank==0)
  // Start the timer
  double t0 = -MPI_Wtime();
  int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank, n);
-
+/*
  t0 += MPI_Wtime();
 
  // Report various information
@@ -223,6 +223,6 @@ if(rank==0)
  free (E);
  free (E_prev);
  free (R);
-
+*/
  MPI_Finalize();
 }
