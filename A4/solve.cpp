@@ -64,11 +64,11 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
 
  _DOUBLE_ **E = *_E, **E_prev = *_E_prev;
  _DOUBLE_ ** tmp_entire;
- if(rank==0) 
    tmp_entire = *_tmp_entire;
 
  MPI_Request send_request, recv_request;
 
+int itertest=0;
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
  // This is different from the number of iterations
@@ -83,7 +83,6 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
 */
    t += dt;
    niter++;
-
    /* 
     * Copy data from boundary of the computational box to the
     * padding region, set up for differencing computational box's boundary
@@ -190,7 +189,8 @@ cerr << "---------------------------------------------------------------\n";
    }*/
    //printf("POINTER VALUES %d %d\n",&E_prev[0][0],&tmp_entire[0][0]);
    printf("VALUE IS %d   %d   %d\n",m+1,n+3, (m+1)*(n+3));
-   MPI_Gather(&E_prev[0][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[0][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   int rc = MPI_Gather(&E_prev[0][0],(m)*(n+3), MPI_DOUBLE, &tmp_entire[0][0],(m)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   printf("GATHER RETURNED %d\n", rc);
  /*
    if(rank==1)
      for(i=0; i <=m+2; i++){
@@ -219,7 +219,7 @@ cerr << "---------------------------------------------------------------\n";
           }
       }
    }
-   cerr << "SWAPPING*****************************\n";
+   printf("THREAD %d GOT HERE\n", rank);
    // Swap current and previous
    _DOUBLE_ **tmp = E; E = E_prev; E_prev = tmp;
  }
@@ -227,6 +227,6 @@ cerr << "---------------------------------------------------------------\n";
   // Store them into the pointers passed in
   *_E = E;
   *_E_prev = E_prev;
-
+  
   return niter;
 }
