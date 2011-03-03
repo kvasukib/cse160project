@@ -65,18 +65,25 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
  _DOUBLE_ ** tmp_entire;
    tmp_entire = *_tmp_entire;
 
- int requests;
+ _DOUBLE_ * ghostsL, *ghostsR;
+ if(ty == 1){//vertical partitioning ghosts
+  if(rank!=0)
+       ghostsL = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3));
+  if(rank!=size-1)
+       ghostsR = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3));
+
+}
+ int nrequests;
  if(rank ==0 || rank == size -1)
-    requests = 1;
+    nrequests = 1;
  else
-    requests = 2;
- MPI_Request* request_arr = (MPI_Request*)malloc(sizeof(MPI_Request)*requests);
- MPI_Status* status_arr = (MPI_Status*)malloc(sizeof(MPI_Status)*requests);
+    nrequests = 2;
+ MPI_Request* request_arr = (MPI_Request*)malloc(sizeof(MPI_Request)*nrequests);
+ MPI_Status* status_arr = (MPI_Status*)malloc(sizeof(MPI_Status)*nrequests);
  MPI_Request send_request;
  //MPI_Request send_request, recv_request;
  //MPI_Status status;
 
-int itertest=0;
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
  // This is different from the number of iterations
@@ -115,8 +122,11 @@ cerr << "---------------------------------------------------------------\n";
 if(tx == 1  || rank==0){
      for (j=1; j<=m+1; j++) 
        E_prev[j][0] = E_prev[j][2];
-}else{//TODO
-
+}else{
+    for (j = 0;j <= m+2;j++)
+        ghostsL[j] = E_prev[j][1];
+    MPI_Isend(ghostsL,m+3,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD,&send_request);
+    MPI_Irecv(ghostsL,m+3,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD,request_arr);
  }
 
 if(tx==1 || rank == size-1){
@@ -124,7 +134,16 @@ if(tx==1 || rank == size-1){
       for (j=1; j<=m+1; j++) 
 	E_prev[j][n+2] = E_prev[j][n];
 
-}else{//TODO
+}else{
+    for (j = 0;j <= m+2;j++)
+        ghostsR[j] = E_prev[j][n+1];
+    MPI_Isend(ghostsR,m+3,MPI_DOUBLE,rank+1,0,MPI_COMM_WORLD,&send_request);
+    if (rank == 0){
+        MPI_Irecv(ghostsR,m+3,MPI_DOUBLE,rank+1,0,MPI_COMM_WORLD,request_arr);
+    }
+    else{
+        MPI_Irecv(ghostsR,m+3,MPI_DOUBLE,rank+1,0,MPI_COMM_WORLD,request_arr+1);
+    }
 
  }
   //send ghost cells
@@ -176,7 +195,7 @@ if(ty == 1 || rank== size-1)
      for (i=2; i<=n; i++, EE++, RR++)
 	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
    }
-MPI_Waitall(requests, request_arr, status_arr); 
+MPI_Waitall(nrequests, request_arr, status_arr); 
 
 
 
@@ -261,7 +280,11 @@ MPI_Waitall(requests, request_arr, status_arr);
      }
   */
 if(do_stats || plot_freq){
-   int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   if(tx == 1)
+     int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   else if (ty==1){
+     //vertical gather
+   }
    if(rank==0){
      if (do_stats)
        repNorms(logfile, tmp_entire,t,dt,full_n,full_n,niter,stats_freq);
@@ -288,8 +311,11 @@ if(do_stats || plot_freq){
    //char c;
    //cin >> c;
  }
-
+if(tx==1)
    int rc = MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+else if (ty==1)
+{   //vertical gather
+}
   // Store them into the pointers passed in
   *_E = E;
   *_E_prev = E_prev;
