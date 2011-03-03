@@ -136,7 +136,7 @@ cin >> c;*/
 
 // External functions
 void cmdLine(int argc, char *argv[], _DOUBLE_& T, int& n, int& tx, int& ty, int& do_stats, int& plot_freq, int& noComm);
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int size, int full_n, int tx, int ty);
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int size, int full_n, int tx, int ty, int noComm);
 void printTOD(ofstream& logfile, string mesg);
 void ReportStart(ofstream& logfile, _DOUBLE_ dt, _DOUBLE_ T, int m, int n, int tx, int ty, int noComm);
 void ReportEnd(ofstream& logfile, _DOUBLE_ T, int niter, _DOUBLE_ **E_prev, int m,int n, double t0, int tx, int ty);
@@ -279,14 +279,18 @@ if(rank==0)
 
  // Start the timer
  double t0 = -MPI_Wtime();
- int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank,size, n,tx,ty);
+ int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank,size, n,tx,ty,noComm);
 
  t0 += MPI_Wtime();
 
  // Report various information
  // Do not remove this call, it is needed for grading
  if(rank==0){
-   ReportEnd(logfile,T,niter,tmp_entire,m,n,t0,tx,ty);
+   if(noComm == 0)
+     ReportEnd(logfile,T,niter,tmp_entire,m,n,t0,tx,ty);
+   else
+     ReportEnd(logfile,T,niter,E_prev,m,n,t0,tx,ty);
+
  }
  if (plot_freq){
     printf("\n\nEnter any input to close the program and the plot...");

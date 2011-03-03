@@ -53,7 +53,7 @@ void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,in
      return l2norm;
  }
 
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** _tmp_entire, int rank, int size, int full_n, int tx, int ty){
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** _tmp_entire, int rank, int size, int full_n, int tx, int ty, int noComm){
 
 
  // Simulated time is different from the integer timestep number
@@ -119,7 +119,7 @@ for(j=1; j<=m+1; j++)
 }
 cerr << "---------------------------------------------------------------\n";
 }*/
-if(tx == 1  || rank==0){
+if(noComm || tx == 1  || rank==0){
      for (j=1; j<=m+1; j++) 
        E_prev[j][0] = E_prev[j][2];
 }else{
@@ -129,7 +129,7 @@ if(tx == 1  || rank==0){
     MPI_Irecv(ghostsL,m+3,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD,request_arr);
  }
 
-if(tx==1 || rank == size-1){
+if(noComm || tx==1 || rank == size-1){
 
       for (j=1; j<=m+1; j++) 
 	E_prev[j][n+2] = E_prev[j][n];
@@ -147,7 +147,7 @@ if(tx==1 || rank == size-1){
 
  }
   //send ghost cells
-  if(ty == 1 || rank==0)
+  if(noComm || ty == 1 || rank==0)
   {
    for (i=1; i<=n+1; i++) 
       E_prev[0][i] = E_prev[2][i];
@@ -155,7 +155,7 @@ if(tx==1 || rank == size-1){
     MPI_Isend(E_prev[1],n+3,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD, &send_request);
     MPI_Irecv(E_prev[0],n+3,MPI_DOUBLE,rank-1,MPI_ANY_TAG,MPI_COMM_WORLD,request_arr);
   }
-if(ty == 1 || rank== size-1)
+if(noComm || ty == 1 || rank== size-1)
   {
    for (i=1; i<=n+1; i++) 
       E_prev[m+2][i] = E_prev[m][i];
@@ -195,7 +195,9 @@ if(ty == 1 || rank== size-1)
      for (i=2; i<=n; i++, EE++, RR++)
 	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
    }
-MPI_Waitall(nrequests, request_arr, status_arr); 
+
+if(noComm == 0)
+  MPI_Waitall(nrequests, request_arr, status_arr); 
 
 
 
@@ -280,15 +282,18 @@ MPI_Waitall(nrequests, request_arr, status_arr);
      }
   */
 if(do_stats || plot_freq){
-   if(tx == 1)
+   if(tx == 1 && noComm == 0)
      int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
-   else if (ty==1){
+   else if (ty==1 && noComm == 0){
      //vertical gather
    }
    if(rank==0){
      if (do_stats)
-       repNorms(logfile, tmp_entire,t,dt,full_n,full_n,niter,stats_freq);
-   
+       if(noComm ==0)
+         repNorms(logfile, tmp_entire,t,dt,full_n,full_n,niter,stats_freq);
+       else
+         repNorms(logfile, E,t,dt,full_n,full_n,niter,stats_freq);
+     
      /*for(i = 0; i <=full_n+2; i++)
      {
         for(j=0; j <=full_n+2; j++){
@@ -300,7 +305,11 @@ if(do_stats || plot_freq){
      if (plot_freq){
           int k = (int)(t/plot_freq);
           if ((t-k*plot_freq)<dt){
-              splot(tmp_entire,t,niter,full_n+1,full_n+1,WAIT);
+              if(noComm == 0)
+                splot(tmp_entire,t,niter,full_n+1,full_n+1,WAIT);
+              else
+                splot(E,t,niter,full_n+1,full_n+1,WAIT);
+      
           }
       }
    }
@@ -311,9 +320,9 @@ if(do_stats || plot_freq){
    //char c;
    //cin >> c;
  }
-if(tx==1)
+if(tx==1 && noComm == 0)
    int rc = MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
-else if (ty==1)
+else if (ty==1 && noComm == 0)
 {   //vertical gather
 }
   // Store them into the pointers passed in
