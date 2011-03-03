@@ -53,7 +53,7 @@ void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,in
      return l2norm;
  }
 
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** _tmp_entire, int rank, int size, int full_n){
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** _tmp_entire, int rank, int size, int full_n, int tx, int ty){
 
 
  // Simulated time is different from the integer timestep number
@@ -65,8 +65,16 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
  _DOUBLE_ ** tmp_entire;
    tmp_entire = *_tmp_entire;
 
- MPI_Request send_request, recv_request;
- MPI_Status status;
+ int requests;
+ if(rank ==0 || rank == size -1)
+    requests = 1;
+ else
+    requests = 2;
+ MPI_Request* request_arr = (MPI_Request*)malloc(sizeof(MPI_Request)*requests);
+ MPI_Status* status_arr = (MPI_Status*)malloc(sizeof(MPI_Status)*requests);
+ MPI_Request send_request;
+ //MPI_Request send_request, recv_request;
+ //MPI_Status status;
 
 int itertest=0;
  // We continue to sweep over the mesh until the simulation has reached
@@ -104,39 +112,47 @@ for(j=1; j<=m+1; j++)
 }
 cerr << "---------------------------------------------------------------\n";
 }*/
-
+if(tx == 1  || rank==0){
      for (j=1; j<=m+1; j++) 
        E_prev[j][0] = E_prev[j][2];
+}else{//TODO
+
+ }
+
+if(tx==1 || rank == size-1){
 
       for (j=1; j<=m+1; j++) 
 	E_prev[j][n+2] = E_prev[j][n];
- 
+
+}else{//TODO
+
+ }
+  //send ghost cells
+  if(ty == 1 || rank==0)
+  {
    for (i=1; i<=n+1; i++) 
       E_prev[0][i] = E_prev[2][i];
-
+}else{
+    MPI_Isend(E_prev[1],n+3,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD, &send_request);
+    MPI_Irecv(E_prev[0],n+3,MPI_DOUBLE,rank-1,MPI_ANY_TAG,MPI_COMM_WORLD,request_arr);
+  }
+if(ty == 1 || rank== size-1)
+  {
    for (i=1; i<=n+1; i++) 
       E_prev[m+2][i] = E_prev[m][i];
- 
-  //send ghost cells
-  if(rank==0)
-  {
-    MPI_Isend(E_prev[m+1],n+2,MPI_DOUBLE,rank+1,0,MPI_COMM_WORLD, &send_request);
-    MPI_Recv(E_prev[m+2],n+2,MPI_DOUBLE,rank+1,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-    MPI_Wait(&send_request, &status);
-  }
-  else if(rank== size-1)
-  {
-    MPI_Isend(E_prev[1],n+2,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD, &send_request);
-    MPI_Recv(E_prev[0],n+2,MPI_DOUBLE,rank-1,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-    MPI_Wait(&send_request, &status);
+
   }
   else
   {
-    cerr << "WTFWTFWTF\n"<<size;
-    //MPI_Isend(E_prev[1],n+1,MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD, &send_request);
-    //MPI_Recv(E_prev[0],n+1,MPI_DOUBLE,rank-1,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+
+    MPI_Isend(E_prev[m+1],n+3,MPI_DOUBLE,rank+1,0,MPI_COMM_WORLD, &send_request);
+    if(rank==0)
+      MPI_Irecv(E_prev[m+2],n+3,MPI_DOUBLE,rank+1,MPI_ANY_TAG,MPI_COMM_WORLD,request_arr);
+    else
+      MPI_Irecv(E_prev[m+2],n+3,MPI_DOUBLE,rank+1,MPI_ANY_TAG,MPI_COMM_WORLD,request_arr+1);
   }
 
+MPI_Waitall(requests, request_arr, status_arr); 
    // Solve for the excitation, a PDE
    for (j=1; j<=m+1; j++){
      for (i=1; i<=n+1; i++) {
@@ -191,7 +207,7 @@ cerr << "---------------------------------------------------------------\n";
    }*/
    //printf("POINTER VALUES %d %d\n",&E_prev[0][0],&tmp_entire[0][0]);
    //printf("VALUE IS %d   %d   %d\n",m+1,n+3, (m+1)*(n+3));
-   int rc = MPI_Gather(&E_prev[0][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[0][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
  /*
    if(rank==1)
      for(i=0; i <=m+2; i++){
@@ -204,7 +220,7 @@ cerr << "---------------------------------------------------------------\n";
      if (do_stats)
        repNorms(logfile, tmp_entire,t,dt,full_n,full_n,niter,stats_freq);
    
- /*    for(i = 0; i <=full_n+2; i++)
+     /*for(i = 0; i <=full_n+2; i++)
      {
         for(j=0; j <=full_n+2; j++){
             //printf("Reading i=%d j=%d\n", i, j);

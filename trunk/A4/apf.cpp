@@ -39,8 +39,69 @@ _DOUBLE_ **alloc2D(int m,int n){
    return(E);
 }
 
-void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int n,int my_m,int my_n, int rank){
+void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int size,int m,int n, int rank, int tx, int ty){
     int i,j;
+
+
+ for (j=1; j<=m+1; j++)
+   for (i=1; i<=n+1; i++)
+     E_prev[j][i] = R[j][i] = 0.0;
+
+
+ if (size == 1){//single processor
+     for (j=1;j<=m+1;j++)
+         for (i=n/2+2;i<=n+1;i++)
+             E_prev[j][i] = 1.0;
+     for (j=m/2+2;j<=m+1;j++)
+         for (i=1;i<=n+1;i++)
+             R[j][i] = 1.0;
+ }
+ else if (tx == 1){//horizontal slices
+     for (j=1; j<=m+1; j++)
+         for (i=n/2+2; i<=n+1; i++)
+             E_prev[j][i] = 1.0;
+     if (rank == size/2-1)
+         for (i = 1; i <= n+1;i++)
+             R[m+2][i] = 1.0;
+     else if (rank == size/2){//top half
+         for (j=1;j <= m+2;j++)
+             for (i = 1; i <= n+1;i++)
+                 R[j][i] = 1.0;
+     } else if (rank > size/2)
+         for (j = 0;j<=m+2;j++)
+             for (i = 1; i <= n+1;i++)
+                 R[j][i] = 1.0;
+ } else if (ty == 1){//Split up vertically
+    for (j = m/2+2;j <= m+1;j++)
+        for (i = 0;i <= n+2;i++)
+            R[j][i] = 1.0;
+    if (rank == 0)
+        for (j = m/2+2;j <= m+1;j++)
+            R[j][0] = 0.0;
+    if (rank == size - 1)
+        for (j = m/2+2;j <= m+1;j++)
+            R[j][n+2] = 0.0;
+    if (rank == size/2-1)
+        for (j = 1; j <= m+1;j++)
+            E_prev[j][n+2] = 1.0;
+    if (rank == size/2){//top half
+        for (j = 1;j <= m+1;j++)
+            for (i = 1;i <= n+2;i++)
+                E_prev[j][i] = 1.0;
+    }
+    if (rank > size/2){
+        for (j = 1;j <= m+1;j++)
+            for (i = 0;i <= n+2;i++)
+                E_prev[j][i] = 1.0;
+     }
+ } else {
+      printf("No 2 dimensional support");
+      return;
+ }
+
+
+
+/*
     // Initialization
     for (j=1; j<=my_m + 1; j++)
         for (i=1; i<= my_n+1; i++){
@@ -64,18 +125,18 @@ void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int n,int my_m,int my_n, 
 if(rank==1){
     for (j=1; j <= my_m+1; j++){
             for (i=1; i<=my_n+1; i++)
-                cerr << E_prev[j][i];
+                cerr << R[j][i];
         cerr << '\n';
         }
     }
 
 char c;
-cin >> c;
+cin >> c;*/
 }
 
 // External functions
 void cmdLine(int argc, char *argv[], _DOUBLE_& T, int& n, int& tx, int& ty, int& do_stats, int& plot_freq, int& noComm);
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int size, int full_n);
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int size, int full_n, int tx, int ty);
 void printTOD(ofstream& logfile, string mesg);
 void ReportStart(ofstream& logfile, _DOUBLE_ dt, _DOUBLE_ T, int m, int n, int tx, int ty, int noComm);
 void ReportEnd(ofstream& logfile, _DOUBLE_ T, int niter, _DOUBLE_ **E_prev, int m,int n, double t0, int tx, int ty);
@@ -132,8 +193,8 @@ int main(int argc, char** argv)
 
    if((n+1) % size == 0){
      rows_per_thread = (int) ceil((n+1)/size);
-     my_m = rows_per_thread;
-     my_n = n;
+     my_m = (n+1)/ty -1;
+     my_n = (n+1)/tx -1;
    }
    else
    { 
@@ -147,8 +208,9 @@ int main(int argc, char** argv)
    E_prev = alloc2D(my_m+2,my_n+2);
    R = alloc2D(my_m+2,my_n+2);
 
- init(E,E_prev,R,m,my_m,my_n,rank);
- if(1)
+ tmp_entire = alloc2D(m+2, n+2);
+ init(E,E_prev,R,size,my_m,my_n,rank,tx,ty);
+ /*if(1)
  {
    tmp_entire = alloc2D(m+2, n+2);
   
@@ -162,7 +224,7 @@ int main(int argc, char** argv)
        for (i=n/2+2; i<= n+1 ; i++){
               tmp_entire[j][i] = 1.0;
        }
-    }
+    }*/
 /*
      for(i = 1; i <=n+1; i++)
      {
@@ -172,7 +234,6 @@ int main(int argc, char** argv)
         cerr << '\n';
      }
 */
- }
 #ifdef DEBUG
  if(rank==0){
    repNorms(tmp_entire,-1,dt,m,n,-1,STATS_FREQ);
@@ -215,7 +276,7 @@ if(rank==0)
 
  // Start the timer
  double t0 = -MPI_Wtime();
- int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank,size, n);
+ int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank,size, n,tx,ty);
 
  t0 += MPI_Wtime();
 
