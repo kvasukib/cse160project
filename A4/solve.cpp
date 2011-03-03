@@ -152,10 +152,9 @@ if(ty == 1 || rank== size-1)
       MPI_Irecv(E_prev[m+2],n+3,MPI_DOUBLE,rank+1,MPI_ANY_TAG,MPI_COMM_WORLD,request_arr+1);
   }
 
-MPI_Waitall(requests, request_arr, status_arr); 
    // Solve for the excitation, a PDE
-   for (j=1; j<=m+1; j++){
-     for (i=1; i<=n+1; i++) {
+   for (j=2; j<=m; j++){
+     for (i=2; i<=n; i++) {
 	E[j][i] = E_prev[j][i]+alpha*(E_prev[j][i+1]+E_prev[j][i-1]-4*E_prev[j][i]+E_prev[j+1][i]+E_prev[j-1][i]);
      }
     }
@@ -164,20 +163,65 @@ MPI_Waitall(requests, request_arr, status_arr);
     * Solve the ODE, advancing excitation and recovery variables
     *     to the next timtestep
     */
-   for (j=1; j<=m+1; j++){
-     _DOUBLE_ *RR = &R[j][1];
-     _DOUBLE_ *EE = &E[j][1];
+   for (j=2; j<=m; j++){
+     double *RR = &R[j][2];
+     double *EE = &E[j][2];
+     for (i=2; i<=n; i++, EE++,RR++)
+	EE[0] += -dt*(kk*EE[0]*(EE[0]-a)*(EE[0]-1)+EE[0]*RR[0]);
+   }
+
+   for (j=2; j<=m; j++){
+     double *RR = &R[j][2];
+     double *EE = &E[j][2];
+     for (i=2; i<=n; i++, EE++, RR++)
+	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
+   }
+MPI_Waitall(requests, request_arr, status_arr); 
+
+
+
+
+   // Solve for the excitation, a PDE
+   for (j=1; j<=m+1; j+=m){
+     for (i=1; i<=n+1; i++) {
+	E[j][i] = E_prev[j][i]+alpha*(E_prev[j][i+1]+E_prev[j][i-1]-4*E_prev[j][i]+E_prev[j+1][i]+E_prev[j-1][i]);
+      }
+   }
+   // Solve for the excitation, a PDE
+   for (j=2; j<=m; j++){
+     for (i=1; i<=n+1; i+=n) {
+	E[j][i] = E_prev[j][i]+alpha*(E_prev[j][i+1]+E_prev[j][i-1]-4*E_prev[j][i]+E_prev[j+1][i]+E_prev[j-1][i]);
+     }
+   }
+
+
+
+   for (j=1; j<=m+1; j+=m){
+     double *RR = &R[j][1];
+     double *EE = &E[j][1];
      for (i=1; i<=n+1; i++, EE++,RR++)
 	EE[0] += -dt*(kk*EE[0]*(EE[0]-a)*(EE[0]-1)+EE[0]*RR[0]);
    }
 
-   for (j=1; j<=m+1; j++){
-     _DOUBLE_ *RR = &R[j][1];
-     _DOUBLE_ *EE = &E[j][1];
+   for (j=2; j<=m;j++){
+     double *RR = &R[j][1];
+     double *EE = &E[j][1];
+     for (i=1; i<=n+1;i+=n,EE+=n,RR+=n)
+        EE[0] += -dt*(kk*EE[0]*(EE[0]-a)*(EE[0]-1)+EE[0]*RR[0]);
+   }
+   for (j=1; j<=m+1; j+=m){
+     double *RR = &R[j][1];
+     double *EE = &E[j][1];
      for (i=1; i<=n+1; i++, EE++, RR++)
 	RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
    }
 
+   for (j=2; j<=m;j++){
+     double *RR = &R[j][1];
+     double *EE = &E[j][1];
+     for (i=1;i<=n+1;i+=n,EE+=n,RR+=n)
+        RR[0] += dt*(epsilon+M1* RR[0]/( EE[0]+M2))*(-RR[0]-kk*EE[0]*(EE[0]-b-1));
+   }
 /*   if(rank==0)
      for(i=1; i<= m+1; i++)
          for(j=1; j <= n+1; j++)
@@ -207,7 +251,7 @@ MPI_Waitall(requests, request_arr, status_arr);
    }*/
    //printf("POINTER VALUES %d %d\n",&E_prev[0][0],&tmp_entire[0][0]);
    //printf("VALUE IS %d   %d   %d\n",m+1,n+3, (m+1)*(n+3));
-   int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   //int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
  /*
    if(rank==1)
      for(i=0; i <=m+2; i++){
@@ -216,6 +260,8 @@ MPI_Waitall(requests, request_arr, status_arr);
        cerr << '\n';
      }
   */
+if(do_stats || plot_freq){
+   int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
    if(rank==0){
      if (do_stats)
        repNorms(logfile, tmp_entire,t,dt,full_n,full_n,niter,stats_freq);
@@ -235,6 +281,7 @@ MPI_Waitall(requests, request_arr, status_arr);
           }
       }
    }
+}
    //printf("THREAD %d GOT HERE\n", rank);
    // Swap current and previous
    _DOUBLE_ **tmp = E; E = E_prev; E_prev = tmp;
@@ -242,6 +289,7 @@ MPI_Waitall(requests, request_arr, status_arr);
    //cin >> c;
  }
 
+   int rc = MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
   // Store them into the pointers passed in
   *_E = E;
   *_E_prev = E_prev;
