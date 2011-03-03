@@ -48,8 +48,8 @@ void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int n,int my_m,int my_n, 
     }
     for (j=1; j<=my_m + 1; j++){
       // for (i=n/2+2; i<= n+1 ; i++){
-       for (i=1; i<=my_n+1; i++){
-            if(rank*my_n + i >= n/2+2)
+       for (i=n/2+2; i<=my_n+1; i++){
+            //if(rank*my_n + i >= n/2+2)
               E_prev[j][i] = 1.0;
        }
     }
@@ -61,11 +61,21 @@ void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int n,int my_m,int my_n, 
                 R[j][i] = 1.0;
         }
     }
+if(rank==1){
+    for (j=1; j <= my_m+1; j++){
+            for (i=1; i<=my_n+1; i++)
+                cerr << E_prev[j][i];
+        cerr << '\n';
+        }
+    }
+
+char c;
+cin >> c;
 }
 
 // External functions
 void cmdLine(int argc, char *argv[], _DOUBLE_& T, int& n, int& tx, int& ty, int& do_stats, int& plot_freq, int& noComm);
-int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int full_n);
+int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int size, int full_n);
 void printTOD(ofstream& logfile, string mesg);
 void ReportStart(ofstream& logfile, _DOUBLE_ dt, _DOUBLE_ T, int m, int n, int tx, int ty, int noComm);
 void ReportEnd(ofstream& logfile, _DOUBLE_ T, int niter, _DOUBLE_ **E_prev, int m,int n, double t0, int tx, int ty);
@@ -205,8 +215,8 @@ if(rank==0)
 
  // Start the timer
  double t0 = -MPI_Wtime();
- int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank, n);
-/*
+ int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank,size, n);
+
  t0 += MPI_Wtime();
 
  // Report various information
@@ -223,6 +233,6 @@ if(rank==0)
  free (E);
  free (E_prev);
  free (R);
-*/
+
  MPI_Finalize();
 }
