@@ -200,6 +200,9 @@ int main(int argc, char** argv)
    { 
      return 1;
    }
+
+  if(size ==1)
+    noComm =1;
  // Allocate contiguous memory for solution arrays
  // The computational box is defined on [1:m+1,1:n+1]
  // We pad the arrays in order to facilitate differencing on the 
