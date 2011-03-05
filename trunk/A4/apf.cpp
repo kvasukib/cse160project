@@ -101,37 +101,6 @@ void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int size,int m,int n, int
 
 
 
-/*
-    // Initialization
-    for (j=1; j<=my_m + 1; j++)
-        for (i=1; i<= my_n+1; i++){
-            E_prev[j][i] = R[j][i] = 0;
-    }
-    for (j=1; j<=my_m + 1; j++){
-      // for (i=n/2+2; i<= n+1 ; i++){
-       for (i=n/2+2; i<=my_n+1; i++){
-            //if(rank*my_n + i >= n/2+2)
-              E_prev[j][i] = 1.0;
-       }
-    }
-   
-   // for (j=m/2+2; j<=m+1; j++){
-    for (j=1; j <= my_m+1; j++){
-        if(rank*my_m + j >= n/2+2){
-            for (i=1; i<=my_n+1; i++)
-                R[j][i] = 1.0;
-        }
-    }
-if(rank==1){
-    for (j=1; j <= my_m+1; j++){
-            for (i=1; i<=my_n+1; i++)
-                cerr << R[j][i];
-        cerr << '\n';
-        }
-    }
-
-char c;
-cin >> c;*/
 }
 
 
@@ -150,7 +119,6 @@ int main(int argc, char** argv)
   int rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  printf("Process %d of %d reporting\n", rank, size);
  /*
   *  Solution arrays
   *   E is the "Excitation" variable, a voltage
