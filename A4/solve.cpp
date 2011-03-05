@@ -18,7 +18,7 @@
 #include "types.h"
 #include "mpi.h"
 using namespace std;
-
+extern double t0;
 void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,int n, int niter, int stats_freq);
 _DOUBLE_ **alloc2D(int m,int n);
 
@@ -87,6 +87,8 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
  // We continue to sweep over the mesh until the simulation has reached
  // the desired simulation Time
  // This is different from the number of iterations
+ t0 = -MPI_Wtime();
+
   while (t<T) {
 /*  
 #ifdef DEBUG
@@ -353,6 +355,8 @@ if(do_stats || plot_freq){
    //char c;
    //cin >> c;
  }
+ t0 += MPI_Wtime();
+
 if(tx==1 && noComm == 0)
    int rc = MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
 else if (ty==1 && noComm == 0)

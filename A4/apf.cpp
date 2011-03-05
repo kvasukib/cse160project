@@ -134,6 +134,9 @@ char c;
 cin >> c;*/
 }
 
+
+
+double t0;
 // External functions
 void cmdLine(int argc, char *argv[], _DOUBLE_& T, int& n, int& tx, int& ty, int& do_stats, int& plot_freq, int& noComm);
 int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, int m, int n, _DOUBLE_ T, _DOUBLE_ alpha, _DOUBLE_ dt, int do_stats, int plot_freq, int stats_freq, _DOUBLE_ *** tmp_entire, int rank, int size, int full_n, int tx, int ty, int noComm);
@@ -191,15 +194,14 @@ int main(int argc, char** argv)
    int my_m;
    int my_n;
 
-   if((n+1) % size == 0){
+   //if((n+1) % size == 0){
      rows_per_thread = (int) ceil((n+1)/size);
      my_m = (n+1)/ty -1;
      my_n = (n+1)/tx -1;
-   }
-   else
-   { 
-     return 1;
-   }
+  // }
+   //else
+   //{ 
+  // }
 
   if(size ==1)
     noComm =1;
@@ -278,10 +280,8 @@ if(rank==0)
   ReportStart(logfile, dt, T, m, n, tx, ty, noComm);
 
  // Start the timer
- double t0 = -MPI_Wtime();
  int niter = solve(logfile, &E, &E_prev, R, my_m, my_n, T, alpha, dt, do_stats, plot_freq,STATS_FREQ, &tmp_entire, rank,size, n,tx,ty,noComm);
 
- t0 += MPI_Wtime();
 
  // Report various information
  // Do not remove this call, it is needed for grading
