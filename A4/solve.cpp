@@ -65,7 +65,7 @@ int solve(ofstream& logfile, _DOUBLE_ ***_E, _DOUBLE_ ***_E_prev, _DOUBLE_ **R, 
  _DOUBLE_ ** tmp_entire;
    tmp_entire = *_tmp_entire;
 
- _DOUBLE_ * ghostsL, *ghostsR;
+ _DOUBLE_ * ghostsL = NULL, *ghostsR = NULL;
  if(ty == 1){//vertical partitioning ghosts
   if(rank!=0)
        ghostsL = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3));
@@ -291,7 +291,7 @@ if (ty == 1 && rank != size - 1)
   */
 if(do_stats || plot_freq){
    if(tx == 1 && noComm == 0)
-     int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+     MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
    else if (ty==1 && noComm == 0){
      //vertical gather
        _DOUBLE_ *tmp_block = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1));
@@ -303,20 +303,18 @@ if(do_stats || plot_freq){
        tmp_block[k++] = E[j][i];
 
 
-   int rc = MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 
         if (rank == 0){
-            int source;
-            int start;
+            int beg;
             int end;
             int iter = 0;
-            for (int i = 0;i < size;i++){
-                source = i;
-                start = (n+1)*source +1;
-                end = start + n;
+            for (int from = 0;from < size;from++){
+                beg = (n+1)*from +1;
+                end = beg + n;
                 for (int j = 0;j <=m+2;j++)
-                    for (int i = start;i <=end;i++){
+                    for (int i = beg;i <=end;i++){
                         tmp_entire[j][i] = tmp_vert[iter++];
                     }
             }
@@ -358,7 +356,7 @@ if(do_stats || plot_freq){
  t0 += MPI_Wtime();
 
 if(tx==1 && noComm == 0)
-   int rc = MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
 else if (ty==1 && noComm == 0)
 {   //vertical gather
 
@@ -371,20 +369,18 @@ else if (ty==1 && noComm == 0)
        tmp_block[k++] = E_prev[j][i];
 
 
-   int rc = MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 
         if (rank == 0){
-            int source;
-            int start;
+            int beg;
             int end;
             int iter = 0;
-            for (int i = 0;i < size;i++){
-                source = i;
-                start = (n+1)*source +1;
-                end = start + n;
+            for (int from = 0;from < size;from++){
+                beg = (n+1)*from +1;
+                end = beg + n;
                 for (int j = 0;j <=m+2;j++)
-                    for (int i = start;i <=end;i++){
+                    for (int i = beg;i <=end;i++){
                         tmp_entire[j][i] = tmp_vert[iter++];
                     }
             }
