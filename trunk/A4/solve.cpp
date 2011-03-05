@@ -20,7 +20,7 @@
 using namespace std;
 
 void repNorms(ofstream& logfile, _DOUBLE_ **E, _DOUBLE_ t, _DOUBLE_ dt, int m,int n, int niter, int stats_freq);
-
+_DOUBLE_ **alloc2D(int m,int n);
 
 // Reports statistics about the computation: the L2 Norm and the Infinity NOrm
 // These values should not vary (except to within roundoff)
@@ -199,7 +199,13 @@ if(noComm || ty == 1 || rank== size-1)
 if(noComm == 0)
   MPI_Waitall(nrequests, request_arr, status_arr); 
 
+if (ty == 1 && rank != 0)
+    for (j = 0;j <= m+2;j++)
+        E_prev[j][0] = ghostsL[j];
 
+if (ty == 1 && rank != size - 1)
+    for (j = 0;j <= m+2;j++)
+        E_prev[j][n+2] = ghostsR[j];
 
 
    // Solve for the excitation, a PDE
@@ -288,12 +294,12 @@ if(do_stats || plot_freq){
      //vertical gather
    }
    if(rank==0){
-     if (do_stats)
+     if (do_stats){
        if(noComm ==0)
          repNorms(logfile, tmp_entire,t,dt,full_n,full_n,niter,stats_freq);
        else
          repNorms(logfile, E,t,dt,full_n,full_n,niter,stats_freq);
-     
+     }
      /*for(i = 0; i <=full_n+2; i++)
      {
         for(j=0; j <=full_n+2; j++){
@@ -324,7 +330,44 @@ if(tx==1 && noComm == 0)
    int rc = MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
 else if (ty==1 && noComm == 0)
 {   //vertical gather
-}
+
+       _DOUBLE_ *tmp_block = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1));
+       _DOUBLE_ * tmp_vert = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1)*size);
+    
+   int k = 0;
+   for(int j = 0; j <=m+2; j++)
+     for(int i = 1; i <= n+1; i++)
+       tmp_block[k++] = E_prev[j][i];
+
+
+   int rc = MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+
+        if (rank == 0){
+            int source;
+            int start;
+            int end;
+            int iter = 0;
+            for (int i = 0;i < size;i++){
+                source = i;
+                start = (n+1)*source +1;
+                end = start + n;
+                for (int j = 0;j <=m+2;j++)
+                    for (int i = start;i <=end;i++){
+                        tmp_entire[j][i] = tmp_vert[iter++];
+                    }
+            }
+        }
+}  
+/*
+   for(int i = 0; i <=full_n+2; i++)
+     {
+        for(int j=0; j <=full_n+2; j++){
+            //printf("Reading i=%d j=%d\n", i, j);
+            printf("%1.1f ",tmp_entire[i][j]);}
+        printf("\n");
+
+     }*/
   // Store them into the pointers passed in
   *_E = E;
   *_E_prev = E_prev;
