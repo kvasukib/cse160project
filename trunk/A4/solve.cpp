@@ -292,6 +292,33 @@ if(do_stats || plot_freq){
      int rc = MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
    else if (ty==1 && noComm == 0){
      //vertical gather
+       _DOUBLE_ *tmp_block = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1));
+       _DOUBLE_ * tmp_vert = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1)*size);
+    
+   int k = 0;
+   for(int j = 0; j <=m+2; j++)
+     for(int i = 1; i <= n+1; i++)
+       tmp_block[k++] = E[j][i];
+
+
+   int rc = MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+
+        if (rank == 0){
+            int source;
+            int start;
+            int end;
+            int iter = 0;
+            for (int i = 0;i < size;i++){
+                source = i;
+                start = (n+1)*source +1;
+                end = start + n;
+                for (int j = 0;j <=m+2;j++)
+                    for (int i = start;i <=end;i++){
+                        tmp_entire[j][i] = tmp_vert[iter++];
+                    }
+            }
+        }
    }
    if(rank==0){
      if (do_stats){
