@@ -44,56 +44,56 @@ void init (_DOUBLE_ **E,_DOUBLE_ **E_prev,_DOUBLE_ **R,int size,int m,int n, int
 
 
  for (j=1; j<=m+1; j++)
-   for (i=1; i<=n+1; i++)
-     E_prev[j][i] = R[j][i] = 0.0;
+  for (i=1; i<=n+1; i++)
+    E_prev[j][i] = R[j][i] = 0.0;
 
 
- if (size == 1){//single processor
+ if (size == 1){
      for (j=1;j<=m+1;j++)
-         for (i=n/2+2;i<=n+1;i++)
-             E_prev[j][i] = 1.0;
-     for (j=m/2+2;j<=m+1;j++)
-         for (i=1;i<=n+1;i++)
+      for (i=n/2+2;i<=n+1;i++)
+           E_prev[j][i] = 1.0;
+    for (j=m/2+2;j<=m+1;j++)
+        for (i=1;i<=n+1;i++)
              R[j][i] = 1.0;
  }
- else if (tx == 1){//horizontal slices
-     for (j=1; j<=m+1; j++)
-         for (i=n/2+2; i<=n+1; i++)
-             E_prev[j][i] = 1.0;
-     if (rank == size/2-1)
+ else if (tx == 1){
+    for (j=1; j<=m+1; j++)
+       for (i=n/2+2; i<=n+1; i++)
+           E_prev[j][i] = 1.0;
+    if (rank == size/2-1)
+        for (i = 1; i <= n+1;i++)
+            R[m+2][i] = 1.0;
+   else if (rank == size/2){
+     for (j=1;j <= m+2;j++)
          for (i = 1; i <= n+1;i++)
-             R[m+2][i] = 1.0;
-     else if (rank == size/2){//top half
-         for (j=1;j <= m+2;j++)
-             for (i = 1; i <= n+1;i++)
                  R[j][i] = 1.0;
      } else if (rank > size/2)
-         for (j = 0;j<=m+2;j++)
-             for (i = 1; i <= n+1;i++)
-                 R[j][i] = 1.0;
- } else if (ty == 1){//Split up vertically
-    for (j = m/2+2;j <= m+1;j++)
-        for (i = 0;i <= n+2;i++)
+      for (j = 0;j<=m+2;j++)
+            for (i = 1; i <= n+1;i++)
+              R[j][i] = 1.0;
+ } else if (ty == 1){
+   for (j = m/2+2;j <= m+1;j++)
+       for (i = 0;i <= n+2;i++)
             R[j][i] = 1.0;
-    if (rank == 0)
-        for (j = m/2+2;j <= m+1;j++)
-            R[j][0] = 0.0;
-    if (rank == size - 1)
-        for (j = m/2+2;j <= m+1;j++)
-            R[j][n+2] = 0.0;
-    if (rank == size/2-1)
-        for (j = 1; j <= m+1;j++)
-            E_prev[j][n+2] = 1.0;
-    if (rank == size/2){//top half
-        for (j = 1;j <= m+1;j++)
-            for (i = 1;i <= n+2;i++)
-                E_prev[j][i] = 1.0;
-    }
-    if (rank > size/2){
-        for (j = 1;j <= m+1;j++)
-            for (i = 0;i <= n+2;i++)
-                E_prev[j][i] = 1.0;
-     }
+   if (rank == 0)
+      for (j = m/2+2;j <= m+1;j++)
+          R[j][0] = 0.0;
+  if (rank == size - 1)
+      for (j = m/2+2;j <= m+1;j++)
+         R[j][n+2] = 0.0;
+  if (rank == size/2-1)
+     for (j = 1; j <= m+1;j++)
+          E_prev[j][n+2] = 1.0;
+  if (rank == size/2){
+      for (j = 1;j <= m+1;j++)
+         for (i = 1;i <= n+2;i++)
+             E_prev[j][i] = 1.0;
+  }
+  if (rank > size/2){
+      for (j = 1;j <= m+1;j++)
+          for (i = 0;i <= n+2;i++)
+              E_prev[j][i] = 1.0;
+   }
  } else {
       printf("No 2 dimensional support");
       return;
@@ -158,18 +158,27 @@ int main(int argc, char** argv)
    }
 
   //calculate number of rows for each proc
-   int rows_per_thread;
    int my_m;
    int my_n;
 
-   //if((n+1) % size == 0){
-     rows_per_thread = (int) ceil((n+1)/size);
+   if((n+1) % size == 0){
      my_m = (n+1)/ty -1;
      my_n = (n+1)/tx -1;
-  // }
-   //else
-   //{ 
-  // }
+   }
+   else
+   { 
+     int q = (n+1) % size;
+     if(rank < q){
+       my_m = (int) ceil((float)(n+1)/ty)-1;
+       my_n = (int) ceil((float)(n+1)/tx)-1;
+     }
+     else{
+       my_m = (int) floor((float)(n+1)/ty)-1;
+       my_n = (int) floor((float)(n+1)/tx)-1;
+
+
+     }
+   }
 
   if(size ==1)
     noComm =1;
