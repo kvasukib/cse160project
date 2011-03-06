@@ -290,21 +290,48 @@ if (ty == 1 && rank != size - 1)
      }
   */
 if(do_stats || plot_freq){
-   if(tx == 1 && noComm == 0)
-     MPI_Gather(&E[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   if(tx == 1 && noComm == 0){
+
+
+  if((full_n+1) % size ==0){
+   MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   }
+  else
+  {
+   int * counts = (int*)malloc(size*sizeof(int));
+   int * displ = (int*)malloc(size*sizeof(int));
+   int to_send = (m+1)*(n+3);
+   MPI_Gather(&to_send,1, MPI_INT, counts,1,MPI_INT,0,MPI_COMM_WORLD);
+   displ[0] = 0;
+   for(int i = 1; i < size; i++)
+   {
+      displ[i] = counts[i-1]+displ[i-1];
+
+   }
+
+   MPI_Gatherv(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],counts, displ,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  }
+
+
+ }
    else if (ty==1 && noComm == 0){
      //vertical gather
+
        _DOUBLE_ *tmp_block = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1));
        _DOUBLE_ * tmp_vert = (_DOUBLE_*)malloc(sizeof(_DOUBLE_)*(m+3)*(n+1)*size);
     
    int k = 0;
    for(int j = 0; j <=m+2; j++)
      for(int i = 1; i <= n+1; i++)
-       tmp_block[k++] = E[j][i];
+       tmp_block[k++] = E_prev[j][i];
+
+
+
+
+  if((full_n+1) % size == 0){
 
 
    MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
-
 
         if (rank == 0){
             int beg;
@@ -318,7 +345,49 @@ if(do_stats || plot_freq){
                         tmp_entire[j][i] = tmp_vert[iter++];
                     }
             }
+  
         }
+
+   }else
+   {
+   int * counts = (int*)malloc(size*sizeof(int));
+   int * displ = (int*)malloc(size*sizeof(int));
+   int * ns = (int*)malloc(size*sizeof(int));
+   int to_send = (m+3)*(n+1);
+   MPI_Gather(&to_send,1, MPI_INT, counts,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Gather(&n,1, MPI_INT, ns,1,MPI_INT,0,MPI_COMM_WORLD);
+   displ[0] = 0;
+   for(int i = 1; i < size; i++)
+   {
+      displ[i] = counts[i-1]+displ[i-1];
+
+   }
+
+   MPI_Gatherv(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,counts, displ,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        if (rank == 0){
+
+            int beg;
+            int end;
+            int iter = 0;
+            int lastend = 0;
+            for (int from = 0;from < size;from++){
+                if(from == 0)
+                  beg = (ns[from] +1)*from +1;
+                else
+                  beg = lastend+1;
+                end = beg + ns[from];
+                lastend = end;
+                for (int j = 0;j <=m+2;j++)
+                    for (int i = beg;i <=end;i++){
+                        tmp_entire[j][i] = tmp_vert[iter++];
+                    }
+            }
+        }
+
+
+   }
+
    }
    if(rank==0){
      if (do_stats){
@@ -345,6 +414,17 @@ if(do_stats || plot_freq){
       
           }
       }
+/*if(rank==0){
+     for(int i = 0; i <full_n+2; i++)
+     {
+        for(int j=0; j < full_n+2; j++)
+           printf("%1.1f ",tmp_entire[i][j]);      
+
+     printf("\n");
+     }
+     char c;
+     cin >> c;
+}*/
    }
 }
    //printf("THREAD %d GOT HERE\n", rank);
@@ -356,12 +436,11 @@ if(do_stats || plot_freq){
  t0 += MPI_Wtime();
 
 if(tx==1 && noComm == 0){
-  if(full_n+1 % size ==0){
+  if((full_n+1) % size ==0){
    MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
    }
   else
   {
-   cerr << "UNBALANCED\n";
    int * counts = (int*)malloc(size*sizeof(int));
    int * displ = (int*)malloc(size*sizeof(int));
    int to_send = (m+1)*(n+3);
@@ -372,9 +451,6 @@ if(tx==1 && noComm == 0){
       displ[i] = counts[i-1]+displ[i-1];
 
    }
-   if(rank==0)
-   for(int i = 0; i < size; i++)
-     printf("%d ", counts[i]);
 
    MPI_Gatherv(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],counts, displ,MPI_DOUBLE,0,MPI_COMM_WORLD);
   }
@@ -392,8 +468,12 @@ else if (ty==1 && noComm == 0)
        tmp_block[k++] = E_prev[j][i];
 
 
-   MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
 
+
+  if((full_n+1) % size == 0){
+
+
+   MPI_Gather(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,(m+3)*(n+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
 
         if (rank == 0){
             int beg;
@@ -407,8 +487,51 @@ else if (ty==1 && noComm == 0)
                         tmp_entire[j][i] = tmp_vert[iter++];
                     }
             }
+  
         }
+
+   }else
+   {
+   int * counts = (int*)malloc(size*sizeof(int));
+   int * displ = (int*)malloc(size*sizeof(int));
+   int * ns = (int*)malloc(size*sizeof(int));
+   int to_send = (m+3)*(n+1);
+   MPI_Gather(&to_send,1, MPI_INT, counts,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Gather(&n,1, MPI_INT, ns,1,MPI_INT,0,MPI_COMM_WORLD);
+   displ[0] = 0;
+   for(int i = 1; i < size; i++)
+   {
+      displ[i] = counts[i-1]+displ[i-1];
+
+   }
+
+   MPI_Gatherv(tmp_block,(m+3)*(n+1), MPI_DOUBLE, tmp_vert,counts, displ,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        if (rank == 0){
+
+            int beg;
+            int end;
+            int iter = 0;
+            int lastend = 0;
+            for (int from = 0;from < size;from++){
+                if(from==0)
+                  beg = (ns[from] +1)*from +1;
+                else
+                  beg = lastend+1;
+                end = beg + ns[from];
+                lastend = end;
+                for (int j = 0;j <=m+2;j++)
+                    for (int i = beg;i <=end;i++){
+                        tmp_entire[j][i] = tmp_vert[iter++];
+                    }
+            }
+        }
+
+
+   }
 }  
+
+
 /*
    for(int i = 0; i <=full_n+2; i++)
      {
