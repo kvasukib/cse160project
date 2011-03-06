@@ -207,15 +207,8 @@ int main(int argc, char** argv)
               tmp_entire[j][i] = 1.0;
        }
     }*/
-/*
-     for(i = 1; i <=n+1; i++)
-     {
-        for(j=1; j <=n+1; j++)
-            printf("Reading i=%d j=%d\n", i, j);
-            cerr << tmp_entire[i][j];
-        cerr << '\n';
-     }
-*/
+
+
 #ifdef DEBUG
  if(rank==0){
    repNorms(tmp_entire,-1,dt,m,n,-1,STATS_FREQ);
