@@ -355,8 +355,31 @@ if(do_stats || plot_freq){
  }
  t0 += MPI_Wtime();
 
-if(tx==1 && noComm == 0)
+if(tx==1 && noComm == 0){
+  if(full_n+1 % size ==0){
    MPI_Gather(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],(m+1)*(n+3),MPI_DOUBLE,0,MPI_COMM_WORLD);
+   }
+  else
+  {
+   cerr << "UNBALANCED\n";
+   int * counts = (int*)malloc(size*sizeof(int));
+   int * displ = (int*)malloc(size*sizeof(int));
+   int to_send = (m+1)*(n+3);
+   MPI_Gather(&to_send,1, MPI_INT, counts,1,MPI_INT,0,MPI_COMM_WORLD);
+   displ[0] = 0;
+   for(int i = 1; i < size; i++)
+   {
+      displ[i] = counts[i-1]+displ[i-1];
+
+   }
+   if(rank==0)
+   for(int i = 0; i < size; i++)
+     printf("%d ", counts[i]);
+
+   MPI_Gatherv(&E_prev[1][0],(m+1)*(n+3), MPI_DOUBLE, &tmp_entire[1][0],counts, displ,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  }
+
+}
 else if (ty==1 && noComm == 0)
 {   //vertical gather
 
